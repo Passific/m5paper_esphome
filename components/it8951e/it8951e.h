@@ -141,6 +141,9 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   void clear(bool init);
 
+  /* Temporary override of the DisplayBuffer for speed up drawing */
+  void draw_pixel_at(int x, int y, Color color) override;
+
  protected:
   void draw_absolute_pixel_internal(int x, int y, Color color) override;
 

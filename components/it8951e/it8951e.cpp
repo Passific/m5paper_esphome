@@ -405,5 +405,32 @@ void IT8951ESensor::dump_config() {
     );
 }
 
+// Temporary solution to speed up drawing
+void HOT IT8951ESensor::draw_pixel_at(int x, int y, Color color) {
+  if (!Display::get_clipping().inside(x, y))
+    return;  // NOLINT
+
+  switch (this->rotation_) {
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_0_DEGREES:
+      break;
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_90_DEGREES:
+      std::swap(x, y);
+      x = this->usPanelW_ - x - 1;
+      break;
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_180_DEGREES:
+      x = this->usPanelW_ - x - 1;
+      y = this->usPanelH_ - y - 1;
+      break;
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_270_DEGREES:
+      std::swap(x, y);
+      y = this->usPanelH_ - y - 1;
+      break;
+  }
+  this->draw_absolute_pixel_internal(x, y, color);
+
+  // Removed to speed up drawing
+  // App.feed_wdt();
+}
+
 }  // namespace it8951e
 }  // namespace esphome
