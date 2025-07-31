@@ -343,6 +343,42 @@ void IT8951ESensor::update_slow() {
     }
 }
 
+void IT8951ESensor::fill(Color color) {
+    for (uint32_t i = 0; i < this->get_buffer_length_(); i++) {
+        this->buffer_[i] = 0xFF;
+    }
+    this->max_x = this->get_width_internal() - 1;
+    this->max_y = this->get_height_internal() - 1;
+    this->min_x = 0;
+    this->min_y = 0;
+}
+
+void HOT IT8951ESensor::draw_pixel_at(int x, int y, Color color) {
+    if (!Display::get_clipping().inside(x, y))
+    return;  // NOLINT
+
+    switch (this->rotation_) {
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_0_DEGREES:
+        break;
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_90_DEGREES:
+        std::swap(x, y);
+        x = this->usPanelW_ - x - 1;
+        break;
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_180_DEGREES:
+        x = this->usPanelW_ - x - 1;
+        y = this->usPanelH_ - y - 1;
+        break;
+    case esphome::display::DisplayRotation::DISPLAY_ROTATION_270_DEGREES:
+        std::swap(x, y);
+        y = this->usPanelH_ - y - 1;
+        break;
+    }
+    this->draw_absolute_pixel_internal(x, y, color);
+
+    // Removed compare to original function to speed up drawing
+    // App.feed_wdt();
+}
+
 void HOT IT8951ESensor::draw_absolute_pixel_internal(int x, int y, Color color) {
     // Fast path: bounds and buffer check first
     if (x < 0 || y < 0 || this->buffer_ == nullptr || x >= this->usPanelW_ || y >= this->usPanelH_) {
@@ -376,7 +412,6 @@ void HOT IT8951ESensor::draw_absolute_pixel_internal(int x, int y, Color color) 
         // Even pixel: upper nibble
         buf = (buf & 0x0F) | (internal_color << 4);
     }
-    
 }
 
 void IT8951ESensor::set_model(it8951eModel model) {
@@ -403,33 +438,6 @@ void IT8951ESensor::dump_config() {
         this->IT8951DevAll[this->model_].devInfo.usPanelW,
         this->IT8951DevAll[this->model_].devInfo.usPanelH
     );
-}
-
-// Temporary solution to speed up drawing
-void HOT IT8951ESensor::draw_pixel_at(int x, int y, Color color) {
-  if (!Display::get_clipping().inside(x, y))
-    return;  // NOLINT
-
-  switch (this->rotation_) {
-    case esphome::display::DisplayRotation::DISPLAY_ROTATION_0_DEGREES:
-      break;
-    case esphome::display::DisplayRotation::DISPLAY_ROTATION_90_DEGREES:
-      std::swap(x, y);
-      x = this->usPanelW_ - x - 1;
-      break;
-    case esphome::display::DisplayRotation::DISPLAY_ROTATION_180_DEGREES:
-      x = this->usPanelW_ - x - 1;
-      y = this->usPanelH_ - y - 1;
-      break;
-    case esphome::display::DisplayRotation::DISPLAY_ROTATION_270_DEGREES:
-      std::swap(x, y);
-      y = this->usPanelH_ - y - 1;
-      break;
-  }
-  this->draw_absolute_pixel_internal(x, y, color);
-
-  // Removed to speed up drawing
-  // App.feed_wdt();
 }
 
 }  // namespace it8951e
