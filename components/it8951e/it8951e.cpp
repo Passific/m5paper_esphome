@@ -246,22 +246,29 @@ void IT8951ESensor::write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
         return;
     }
 
+    // rounded up to be multiple of 4
+    x = (x + 3) & 0xFFFC;
+    y = (y + 3) & 0xFFFC;
+
     this->set_target_memory_addr(this->IT8951DevAll[this->model_].devInfo.usImgBufAddrL, this->IT8951DevAll[this->model_].devInfo.usImgBufAddrH);
     this->set_area(x, y, w, h);
 
-    uint32_t pos = 0;
-    const uint32_t maxPos = (w * h) >> 1; // 2 pixels per byte
+    const uint16_t bytewidth = this->usPanelW_ >> 1; // bytes per row (2 pixels per byte)
 
     this->enable();
     /* Send data preamble */
     this->write_byte16(0x0000);
 
-    for (uint32_t i = 0; i < maxPos; ++i) {
-        uint8_t data = gram[i];
-        if (!this->reversed_) {
-            data = 0xFF - data;
+    for (uint32_t row = 0; row < h; ++row) {
+        for (uint32_t col = 0; col < w; col += 2) {
+            // Calculate buffer index for packed 4bpp (2 pixels per byte)
+            uint32_t buf_index = (y + row) * bytewidth + ((x + col) >> 1);
+            uint8_t data = gram[buf_index];
+            if (!this->reversed_) {
+                data = 0xFF - data;
+            }
+            this->transfer_byte(data);
         }
-        this->transfer_byte(data);
     }
 
     this->disable();
@@ -273,8 +280,10 @@ void IT8951ESensor::write_display() {
     if (this->sleep_when_done_) {
         this->write_command(IT8951_TCON_SYS_RUN);
     }
-    this->write_buffer_to_display(this->min_x, this->min_y, this->max_x, this->max_y, this->buffer_);
-    this->update_area(this->min_x, this->min_y, this->max_x, this->max_y, update_mode_e::UPDATE_MODE_DU);   // 2 level
+    const u_int32_t width = this->max_x - this->min_x + 1;
+    const u_int32_t height = this->max_y - this->min_y + 1;
+    this->write_buffer_to_display(this->min_x, this->min_y, width, height, this->buffer_);
+    this->update_area(this->min_x, this->min_y, width, height, update_mode_e::UPDATE_MODE_DU);   // 2 level
     this->max_x = 0;
     this->max_y = 0;
     this->min_x = this->IT8951DevAll[this->model_].devInfo.usPanelW;
@@ -288,8 +297,10 @@ void IT8951ESensor::write_display_slow() {
     if (this->sleep_when_done_) {
         this->write_command(IT8951_TCON_SYS_RUN);
     }
-    this->write_buffer_to_display(this->min_x, this->min_y, this->max_x, this->max_y, this->buffer_);
-    this->update_area(this->min_x, this->min_y, this->max_x, this->max_y, update_mode_e::UPDATE_MODE_GC16);
+    const u_int32_t width = this->max_x - this->min_x + 1;
+    const u_int32_t height = this->max_y - this->min_y + 1;
+    this->write_buffer_to_display(this->min_x, this->min_y, width, height, this->buffer_);
+    this->update_area(this->min_x, this->min_y, width, height, update_mode_e::UPDATE_MODE_GC16);
     this->max_x = 0;
     this->max_y = 0;
     this->min_x = this->IT8951DevAll[this->model_].devInfo.usPanelW;
@@ -306,6 +317,8 @@ void IT8951ESensor::write_display_slow() {
 void IT8951ESensor::clear(bool init) {
     this->m_endian_type = IT8951_LDIMG_L_ENDIAN;
     this->m_pix_bpp     = IT8951_4BPP;
+
+    Display::clear();
 
     this->set_target_memory_addr(this->IT8951DevAll[this->model_].devInfo.usImgBufAddrL, this->IT8951DevAll[this->model_].devInfo.usImgBufAddrH);
     this->set_area(0, 0, this->get_width_internal(), this->get_height_internal());
