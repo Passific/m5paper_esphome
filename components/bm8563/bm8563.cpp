@@ -143,7 +143,7 @@ void BM8563::setTime(BM8563_TimeTypeDef* BM8563_TimeStruct) {
 
 void BM8563::getDate(BM8563_DateTypeDef* BM8563_DateStruct) {
   uint8_t buf[4] = {0};
-  this->read_register(0x05, buf, 5);
+  this->read_register(0x05, buf, sizeof(buf));
 
   BM8563_DateStruct->day    = bcd2ToByte(buf[0] & 0x3f);
   BM8563_DateStruct->week = bcd2ToByte(buf[1] & 0x07);
