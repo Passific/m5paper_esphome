@@ -131,6 +131,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   void set_reset_duration(uint32_t reset_duration) { this->reset_duration_ = reset_duration; }
   void set_model(it8951eModel model);
   void set_sleep_when_done(bool sleep_when_done) { this->sleep_when_done_ = sleep_when_done; }
+  void set_full_update_every(uint32_t full_update_every) { this->full_update_every_ = full_update_every; }
 
   void setup() override;
   void update() override;
@@ -143,6 +144,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   void fill(Color color) override;
   void draw_pixel_at(int x, int y, Color color) override;
+  void write_display(update_mode_e mode);
 
  protected:
   void draw_absolute_pixel_internal(int x, int y, Color color) override;
@@ -174,6 +176,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   int min_y = 540;
   uint16_t m_endian_type = 0;
   uint16_t m_pix_bpp = 0;
+  uint8_t _it8951_rotation = 0;
 
   GPIOPin *reset_pin_{nullptr};
   GPIOPin *busy_pin_{nullptr};
@@ -183,6 +186,8 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   bool reversed_{false};
   uint32_t reset_duration_{100};
   bool sleep_when_done_{true}; // If true, the display will go to sleep after each update
+  uint32_t full_update_every_{60}; // Full screen refresh every 60 updates
+  uint32_t partial_update_{0}; // Partial update counter
   enum it8951eModel model_{it8951eModel::M5EPD};
 
   void reset(void);
@@ -214,8 +219,6 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   void write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
                                 uint16_t h, const uint8_t *gram);
-  void write_display();
-  void write_display_slow();
 };
 
 template<typename... Ts> class ClearAction : public Action<Ts...>, public Parented<IT8951ESensor> {
@@ -226,6 +229,11 @@ template<typename... Ts> class ClearAction : public Action<Ts...>, public Parent
 template<typename... Ts> class UpdateSlowAction : public Action<Ts...>, public Parented<IT8951ESensor> {
  public:
   void play(Ts... x) override { this->parent_->update_slow(); }
+};
+
+template<typename... Ts> class DrawAction : public Action<Ts...>, public Parented<IT8951ESensor> {
+ public:
+  void play(Ts... x) override { this->parent_->write_display(IT8951ESensor::UPDATE_MODE_DU); }
 };
 
 }  // namespace it8951e

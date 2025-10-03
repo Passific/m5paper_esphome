@@ -102,14 +102,23 @@ void IT8951ESensor::write_args(uint16_t cmd, uint16_t *args, uint16_t length) {
 
 void IT8951ESensor::set_area(uint16_t x, uint16_t y, uint16_t w,
                                   uint16_t h) {
-    uint16_t args[5];
 
-    args[0] = (this->m_endian_type << 8 | this->m_pix_bpp << 4);
-    args[1] = x;
-    args[2] = y;
-    args[3] = w;
-    args[4] = h;
-    this->write_args(IT8951_TCON_LD_IMG_AREA, args, 5);
+    if (0 == x && 0 == y && w == this->get_width_internal() && h == this->get_height_internal()) {
+        // Full screen
+        uint16_t args[1];
+        args[0] = (this->m_endian_type << 8 | this->m_pix_bpp << 4);
+        this->write_args(IT8951_TCON_LD_IMG, args, sizeof(args));
+    }
+    else {
+        // Partial update
+        uint16_t args[5];
+        args[0] = (this->m_endian_type << 8 | this->m_pix_bpp << 4);
+        args[1] = x;
+        args[2] = y;
+        args[3] = w;
+        args[4] = h;
+        this->write_args(IT8951_TCON_LD_IMG_AREA, args, sizeof(args));
+    }
 }
 
 void IT8951ESensor::wait_busy(uint32_t timeout) {
@@ -150,10 +159,6 @@ void IT8951ESensor::update_area(uint16_t x, uint16_t y, uint16_t w,
         return;
     }
 
-    // rounded up to be multiple of 4
-    x = (x + 3) & 0xFFFC;
-    y = (y + 3) & 0xFFFC;
-
     this->check_busy();
 
     uint16_t args[7];
@@ -165,7 +170,7 @@ void IT8951ESensor::update_area(uint16_t x, uint16_t y, uint16_t w,
     args[5] = this->IT8951DevAll[this->model_].devInfo.usImgBufAddrL;
     args[6] = this->IT8951DevAll[this->model_].devInfo.usImgBufAddrH;
 
-    this->write_args(IT8951_I80_CMD_DPY_BUF_AREA, args, 7);
+    this->write_args(IT8951_I80_CMD_DPY_BUF_AREA, args, sizeof(args));
 }
 
 void IT8951ESensor::reset(void) {
@@ -241,14 +246,6 @@ void IT8951ESensor::write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
                                             uint16_t h, const uint8_t *gram) {
     this->m_endian_type = IT8951_LDIMG_B_ENDIAN;
     this->m_pix_bpp     = IT8951_4BPP;
-    if (x > this->get_width() || y > this->get_height()) {
-        ESP_LOGE(TAG, "Pos (%d, %d) out of bounds.", x, y);
-        return;
-    }
-
-    // rounded up to be multiple of 4
-    x = (x + 3) & 0xFFFC;
-    y = (y + 3) & 0xFFFC;
 
     this->set_target_memory_addr(this->IT8951DevAll[this->model_].devInfo.usImgBufAddrL, this->IT8951DevAll[this->model_].devInfo.usImgBufAddrH);
     this->set_area(x, y, w, h);
@@ -258,6 +255,8 @@ void IT8951ESensor::write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
     this->enable();
     /* Send data preamble */
     this->write_byte16(0x0000);
+
+    ESP_LOGW(TAG, "Transfering %d x %d @ %d,%d", w, h, x, y);
 
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; col += 2) {
@@ -276,40 +275,48 @@ void IT8951ESensor::write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
     this->write_command(IT8951_TCON_LD_IMG_END);
 }
 
-void IT8951ESensor::write_display() {
-    if (this->sleep_when_done_) {
+void IT8951ESensor::write_display(update_mode_e mode) {
+    const bool sleep_when_done = this->sleep_when_done_; // For consistency
+    if (sleep_when_done) {
         this->write_command(IT8951_TCON_SYS_RUN);
+    }
+    this->partial_update_++;
+    if (this->full_update_every_ > 0 && this->partial_update_ >= this->full_update_every_) {
+        this->partial_update_ = 0;
+        mode = update_mode_e::UPDATE_MODE_GC16;
+        this->min_x = 0;
+        this->min_y = 0;
+        this->max_x = this->get_width_internal() - 1;
+        this->max_y = this->get_height_internal() - 1;
+    }
+    else {
+        // rounded up to be multiple of 4
+        this->min_x = (this->min_x) & 0xFFFC;
+        this->min_y = (this->min_y) & 0xFFFC;
+
     }
     const u_int32_t width = this->max_x - this->min_x + 1;
     const u_int32_t height = this->max_y - this->min_y + 1;
+    if (this->min_x > this->get_width_internal() || this->min_y > this->get_height_internal()) {
+        ESP_LOGE(TAG, "Pos (%d, %d) out of bounds.", this->min_x, this->min_y);
+        return;
+    }
+    if ((this->min_x + width) > this->get_width_internal() || (this->min_y + height) > this->get_height_internal()) {
+        ESP_LOGE(TAG, "Dim (%d, %d) out of bounds.", this->min_x + width, this->min_y + height);
+        return;
+    }
+   // ESP_LOGE(TAG, "write_buffer_to_display (x %d,y %d,w %d,h %d,rot %d).", this->min_x, this->min_y, width, height, this->rotation_);
+
     this->write_buffer_to_display(this->min_x, this->min_y, width, height, this->buffer_);
-    this->update_area(this->min_x, this->min_y, width, height, update_mode_e::UPDATE_MODE_DU);   // 2 level
+    this->update_area(this->min_x, this->min_y, width, height, mode);
     this->max_x = 0;
     this->max_y = 0;
-    this->min_x = this->IT8951DevAll[this->model_].devInfo.usPanelW;
-    this->min_y = this->IT8951DevAll[this->model_].devInfo.usPanelH;
-    if (this->sleep_when_done_) {
+    this->min_x = this->get_width_internal();
+    this->min_y = this->get_height_internal();
+    if (sleep_when_done) {
         this->write_command(IT8951_TCON_SLEEP);
     }
 }
-
-void IT8951ESensor::write_display_slow() {
-    if (this->sleep_when_done_) {
-        this->write_command(IT8951_TCON_SYS_RUN);
-    }
-    const u_int32_t width = this->max_x - this->min_x + 1;
-    const u_int32_t height = this->max_y - this->min_y + 1;
-    this->write_buffer_to_display(this->min_x, this->min_y, width, height, this->buffer_);
-    this->update_area(this->min_x, this->min_y, width, height, update_mode_e::UPDATE_MODE_GC16);
-    this->max_x = 0;
-    this->max_y = 0;
-    this->min_x = this->IT8951DevAll[this->model_].devInfo.usPanelW;
-    this->min_y = this->IT8951DevAll[this->model_].devInfo.usPanelH;
-    if (this->sleep_when_done_) {
-        this->write_command(IT8951_TCON_SLEEP);
-    }
-}
-
 
 /** @brief Clear graphics buffer
  * @param init Screen initialization, If is 0, clear the buffer without initializing
@@ -345,20 +352,20 @@ void IT8951ESensor::clear(bool init) {
 void IT8951ESensor::update() {
     if (this->is_ready()) {
         this->do_update_();
-        this->write_display();
+        this->write_display(update_mode_e::UPDATE_MODE_DU); // 2 level
     }
 }
 
 void IT8951ESensor::update_slow() {
     if (this->is_ready()) {
         this->do_update_();
-        this->write_display_slow();
+        this->write_display(update_mode_e::UPDATE_MODE_GC16);
     }
 }
 
 void IT8951ESensor::fill(Color color) {
     for (uint32_t i = 0; i < this->get_buffer_length_(); i++) {
-        this->buffer_[i] = 0x00;
+        this->buffer_[i] = color.raw_32 & 0x0F;
     }
     this->max_x = this->get_width_internal() - 1;
     this->max_y = this->get_height_internal() - 1;
@@ -419,9 +426,15 @@ void HOT IT8951ESensor::draw_absolute_pixel_internal(int x, int y, Color color) 
 
     uint8_t &buf = this->buffer_[index];
     if (x & 0x1) {
+        if ((buf & 0x0F) == internal_color) {
+            return;  // No change, skip
+        }
         // Odd pixel: lower nibble
         buf = (buf & 0xF0) | internal_color;
     } else {
+        if ((buf & 0xF0) == internal_color) {
+            return;  // No change, skip
+        }
         // Even pixel: upper nibble
         buf = (buf & 0x0F) | (internal_color << 4);
     }
@@ -451,6 +464,12 @@ void IT8951ESensor::dump_config() {
         this->IT8951DevAll[this->model_].devInfo.usPanelW,
         this->IT8951DevAll[this->model_].devInfo.usPanelH
     );
+
+    ESP_LOGCONFIG(TAG,
+        "  Sleep when done: %s\n"
+        "  Partial Updating: %s\n"
+        "  Full Update Every: %u",
+        YESNO(this->sleep_when_done_), YESNO(this->partial_updating_), this->full_update_every_);
 }
 
 }  // namespace it8951e

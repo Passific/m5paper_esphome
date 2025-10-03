@@ -15,6 +15,7 @@ from esphome.const import (
     CONF_MODEL,
     CONF_REVERSED,
     CONF_SLEEP_WHEN_DONE,
+    CONF_FULL_UPDATE_EVERY,
 )
 
 DEPENDENCIES = ['spi']
@@ -25,6 +26,7 @@ IT8951ESensor = it8951e_ns.class_(
 )
 ClearAction = it8951e_ns.class_("ClearAction", automation.Action)
 UpdateSlowAction = it8951e_ns.class_("UpdateSlowAction", automation.Action)
+DrawAction = it8951e_ns.class_("DrawAction", automation.Action)
 
 it8951eModel = it8951e_ns.enum("it8951eModel")
 
@@ -48,11 +50,11 @@ CONFIG_SCHEMA = cv.All(
                 MODELS, upper=True, space="_"
             ),
             cv.Optional(CONF_SLEEP_WHEN_DONE, default=True): cv.boolean,
+            cv.Optional(CONF_FULL_UPDATE_EVERY, default=60): cv.int_range(min=0, max=4294967295),
         }
     )
     .extend(cv.polling_component_schema("1s"))
     .extend(spi.spi_device_schema()),
-    cv.has_at_most_one_key(CONF_PAGES, CONF_LAMBDA),
 )
 
 @automation.register_action(
@@ -67,6 +69,15 @@ CONFIG_SCHEMA = cv.All(
 @automation.register_action(
     "it8951e.updateslow",
     UpdateSlowAction,
+    automation.maybe_simple_id(
+        {
+            cv.GenerateID(): cv.use_id(IT8951ESensor),
+        }
+    ),
+)
+@automation.register_action(
+    "it8951e.draw",
+    DrawAction,
     automation.maybe_simple_id(
         {
             cv.GenerateID(): cv.use_id(IT8951ESensor),
@@ -105,3 +116,5 @@ async def to_code(config):
         cg.add(var.set_reset_duration(config[CONF_RESET_DURATION]))
     if CONF_SLEEP_WHEN_DONE in config:
         cg.add(var.set_sleep_when_done(config[CONF_SLEEP_WHEN_DONE]))
+    if CONF_FULL_UPDATE_EVERY in config:
+        cg.add(var.set_full_update_every(config[CONF_FULL_UPDATE_EVERY]))
