@@ -469,7 +469,7 @@ void IT8951ESensor::dump_config() {
         "  Sleep when done: %s\n"
         "  Partial Updating: %s\n"
         "  Full Update Every: %u",
-        YESNO(this->sleep_when_done_), YESNO(this->partial_updating_), this->full_update_every_);
+        YESNO(this->sleep_when_done_), YESNO(this->full_update_every_ > 0), this->full_update_every_);
 }
 
 }  // namespace it8951e
