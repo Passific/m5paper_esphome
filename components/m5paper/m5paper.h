@@ -26,7 +26,7 @@ private:
 
 template<typename... Ts> class PowerAction : public Action<Ts...>, public Parented<M5PaperComponent> {
 public:
-    void play(Ts... x) override { this->parent_->shutdown_main_power(); }
+    void play(const Ts &... x) override { this->parent_->shutdown_main_power(); }
 };
 
 } //namespace m5paper

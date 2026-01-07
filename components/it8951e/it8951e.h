@@ -223,17 +223,17 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
 template<typename... Ts> class ClearAction : public Action<Ts...>, public Parented<IT8951ESensor> {
  public:
-  void play(Ts... x) override { this->parent_->clear(true); }
+  void play(const Ts &... x) override { this->parent_->clear(true); }
 };
 
 template<typename... Ts> class UpdateSlowAction : public Action<Ts...>, public Parented<IT8951ESensor> {
  public:
-  void play(Ts... x) override { this->parent_->update_slow(); }
+  void play(const Ts &... x) override { this->parent_->update_slow(); }
 };
 
 template<typename... Ts> class DrawAction : public Action<Ts...>, public Parented<IT8951ESensor> {
  public:
-  void play(Ts... x) override { this->parent_->write_display(IT8951ESensor::UPDATE_MODE_DU); }
+  void play(const Ts &... x) override { this->parent_->write_display(IT8951ESensor::UPDATE_MODE_DU); }
 };
 
 }  // namespace it8951e

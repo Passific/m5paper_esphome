@@ -62,17 +62,17 @@ class BM8563 : public time::RealTimeClock, public i2c::I2CDevice {
 
 template<typename... Ts> class WriteAction : public Action<Ts...>, public Parented<BM8563> {
  public:
-  void play(Ts... x) override { this->parent_->write_time(); }
+  void play(const Ts &... x) override { this->parent_->write_time(); }
 };
 
 template<typename... Ts> class ReadAction : public Action<Ts...>, public Parented<BM8563> {
  public:
-  void play(Ts... x) override { this->parent_->read_time(); }
+  void play(const Ts &... x) override { this->parent_->read_time(); }
 };
 
 template<typename... Ts> class SleepAction : public Action<Ts...>, public Parented<BM8563> {
  public:
-  void play(Ts... x) override { this->parent_->apply_sleep_duration(); }
+  void play(const Ts &... x) override { this->parent_->apply_sleep_duration(); }
 };
 
 }  // namespace bm8563
