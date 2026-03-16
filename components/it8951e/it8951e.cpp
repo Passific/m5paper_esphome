@@ -501,8 +501,27 @@ void IT8951ESensor::update_slow() {
     }
 }
 
+uint8_t IT8951ESensor::color_to_nibble_(const Color &color) const {
+    // Backward-compatible direct nibble path used by configs that set raw_32 to 0x0-0xF.
+    if (color.g == 0 && color.b == 0 && color.w == 0 && color.r <= 0x0F) {
+        return color.r;
+    }
+
+    // Convert to 4bpp grayscale from 8-bit channels.
+    uint16_t gray = static_cast<uint16_t>(color.r) + color.g + color.b;
+    gray /= 3;
+    if (color.w > gray) {
+        gray = color.w;
+    }
+    uint8_t nibble = static_cast<uint8_t>((gray + 8) >> 4);
+    if (nibble > 0x0F) {
+        nibble = 0x0F;
+    }
+    return nibble;
+}
+
 void IT8951ESensor::fill(Color color) {
-    const uint8_t packed_color = static_cast<uint8_t>(color.raw_32 & 0x0F);
+    const uint8_t packed_color = this->color_to_nibble_(color);
     const uint8_t fill_byte = static_cast<uint8_t>((packed_color << 4) | packed_color);
     for (uint32_t i = 0; i < this->get_buffer_length_(); i++) {
         this->buffer_[i] = fill_byte;
@@ -559,7 +578,7 @@ void HOT IT8951ESensor::draw_absolute_pixel_internal(int x, int y, Color color) 
         this->min_y = y;
     }
 
-    uint32_t internal_color = color.raw_32 & 0x0F;
+    uint8_t internal_color = this->color_to_nibble_(color) & 0x0F;
     uint16_t _bytewidth = this->usPanelW_ >> 1;
 
     uint32_t index = static_cast<uint32_t>(y) * _bytewidth + (static_cast<uint32_t>(x) >> 1);

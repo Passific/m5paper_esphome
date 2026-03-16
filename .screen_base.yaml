@@ -193,7 +193,7 @@ display:
       then:
         - lambda: id(homepage_force_full_redraw) = true;
         - it8951e.clear
-        - component.update: m5paper_display
+        - it8951e.updateslow
     lambda: |-
       // Clock
       it.strftime(25, 420, id(clock_font), "%H:%M", id(rtc_time).now());

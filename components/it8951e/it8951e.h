@@ -240,6 +240,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   bool is_idle_() const;
   bool prepare_transfer_(update_mode_e &mode);
   bool transfer_row_data_();
+  uint8_t color_to_nibble_(const Color &color) const;
 
   EPaperState state_{EPaperState::IDLE};
   uint32_t delay_until_{0};

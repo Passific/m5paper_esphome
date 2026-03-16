@@ -9,7 +9,7 @@ DEPENDENCIES = ['i2c']
 CONF_I2C_ADDR = 0x51
 
 bm8563 = cg.esphome_ns.namespace('bm8563')
-BM8563 = bm8563.class_('BM8563', cg.Component, i2c.I2CDevice)
+BM8563 = bm8563.class_('BM8563', time.RealTimeClock, i2c.I2CDevice)
 WriteAction = bm8563.class_("WriteAction", automation.Action)
 ReadAction = bm8563.class_("ReadAction", automation.Action)
 SleepAction = bm8563.class_("SleepAction", automation.Action)
