@@ -2,34 +2,33 @@ esphome:
   name: ${device_id}
   name_add_mac_suffix: true
   on_boot:
-    - priority: 220.0
+    - priority: -100
       then:
         - it8951e.clear
         - delay: 100ms
-        - component.update: m5paper_display
-    - priority: -100.0
-      then:
-        - delay: 10s
         - component.update: m5paper_display
 
 esp32:
   board: m5stack_paper
   flash_size: 16MB
   framework:
-    type: arduino
+    type: esp-idf # esp-idf or arduino
+    advanced:
+      minimum_chip_revision: '3.1'
 
 external_components:
   - source: github://Passific/m5paper_esphome
 
 # Enable logging
 logger:
-  level: DEBUG
+  level: WARN
 
 # Enable psram
 psram:
 
 # Enable Home Assistant API
 api:
+  batch_delay: 0ms  # Remove latency for touchscreen interactions
 
 ota:
 
@@ -187,6 +186,14 @@ display:
     rotation: 0
     reversed: False
     update_interval: never
+    full_update_every: 60
+    auto_clear_enabled: true # Should be set to false when partial updates are used, to avoid clearing the screen after each update
+    sleep_when_done: false
+    on_page_change:
+      then:
+        - lambda: id(homepage_force_full_redraw) = true;
+        - it8951e.clear
+        - component.update: m5paper_display
     lambda: |-
       // Clock
       it.strftime(25, 420, id(clock_font), "%H:%M", id(rtc_time).now());

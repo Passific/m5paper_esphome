@@ -8,6 +8,23 @@
 namespace esphome {
 namespace it8951e {
 
+enum class EPaperState : uint8_t {
+  IDLE,       // not doing anything
+  UPDATE,     // update the buffer
+  RESET,      // drive reset low (active)
+  RESET_END,  // drive reset high (inactive)
+
+  SHOULD_WAIT,     // states higher than this should wait for the display to be not busy
+  INITIALISE,      // send the init sequence
+  TRANSFER_DATA,   // transfer data to the display
+  POWER_ON,        // power on the display
+  REFRESH_SCREEN,  // send refresh command
+  POWER_OFF,       // power off the display
+  DEEP_SLEEP,      // deep sleep the display
+};
+
+static constexpr uint32_t MAX_TRANSFER_TIME = 25;  // Transfer in 25ms blocks to allow the loop to run
+
 enum it8951eModel
 {
   M5EPD = 0,
@@ -134,6 +151,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   void set_full_update_every(uint32_t full_update_every) { this->full_update_every_ = full_update_every; }
 
   void setup() override;
+  void loop() override;
   void update() override;
   void update_slow();
   void dump_config() override;
@@ -164,7 +182,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
     0x36E0, // .devInfo.usImgBufAddrL
     0x0012, // .devInfo.usImgBufAddrH
     "",     // .devInfo.usFWVersion
-    "",     // .devInfo.usFWVersion
+    "",     // .devInfo.usLUTVersion
     display::DisplayType::DISPLAY_TYPE_GRAYSCALE // .displayType (M5EPD supports 16 gray scale levels)
   };
 
@@ -217,8 +235,29 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
 
 
-  void write_buffer_to_display(uint16_t x, uint16_t y, uint16_t w,
-                                uint16_t h, const uint8_t *gram);
+  void process_state_();
+  void set_state_(EPaperState state, uint16_t delay = 0);
+  bool is_idle_() const;
+  bool prepare_transfer_(update_mode_e &mode);
+  bool transfer_row_data_();
+
+  EPaperState state_{EPaperState::IDLE};
+  uint32_t delay_until_{0};
+  bool waiting_for_idle_{false};
+  bool initialized_{false};
+
+  update_mode_e pending_mode_{update_mode_e::UPDATE_MODE_NONE};
+  uint16_t pending_x_{0};
+  uint16_t pending_y_{0};
+  uint16_t pending_w_{0};
+  uint16_t pending_h_{0};
+  uint16_t transfer_row_{0};
+  uint32_t draw_calls_since_yield_{0};
+  uint32_t update_started_at_{0};
+  bool update_timing_active_{false};
+  bool did_init_clear_{false};
+  uint32_t clear_count_{0};
+  static constexpr uint32_t INIT_CLEAR_EVERY = 12;
 };
 
 template<typename... Ts> class ClearAction : public Action<Ts...>, public Parented<IT8951ESensor> {
