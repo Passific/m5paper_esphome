@@ -10,7 +10,6 @@ from esphome.const import (
     CONF_RESET_PIN,
     CONF_RESET_DURATION,
     CONF_BUSY_PIN,
-    CONF_PAGES,
     CONF_LAMBDA,
     CONF_MODEL,
     CONF_REVERSED,

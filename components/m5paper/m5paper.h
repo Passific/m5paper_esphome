@@ -4,8 +4,7 @@
 #include "esphome/core/gpio.h"
 #include "esphome/core/automation.h"
 
-namespace esphome {
-namespace m5paper {
+namespace esphome::m5paper {
 
 class M5PaperComponent : public Component {
     void setup() override;
@@ -29,5 +28,4 @@ public:
     void play(const Ts &... x) override { this->parent_->shutdown_main_power(); }
 };
 
-} //namespace m5paper
-} //namespace esphome
+} //namespace esphome::m5paper

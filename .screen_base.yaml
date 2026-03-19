@@ -517,7 +517,6 @@ time:
       - bm8563.write_time
   - platform: bm8563
     id: rtc_time
-    sleep_duration: 60000ms
     on_time:
       - seconds: 0
         then:

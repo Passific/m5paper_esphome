@@ -5,8 +5,7 @@
 #include "esphome/components/spi/spi.h"
 #include "esphome/components/display/display_buffer.h"
 
-namespace esphome {
-namespace it8951e {
+namespace esphome::it8951e {
 
 enum class EPaperState : uint8_t {
   IDLE,       // not doing anything
@@ -275,5 +274,4 @@ template<typename... Ts> class DrawAction : public Action<Ts...>, public Parente
   void play(const Ts &... x) override { this->parent_->write_display(IT8951ESensor::UPDATE_MODE_DU); }
 };
 
-}  // namespace it8951e
-}  // namespace esphome
+}  // namespace esphome::it8951e

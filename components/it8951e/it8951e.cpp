@@ -4,8 +4,7 @@
 #include "esphome/core/application.h"
 #include "esphome/core/gpio.h"
 
-namespace esphome {
-namespace it8951e {
+namespace esphome::it8951e {
 
 static const char *TAG = "it8951e.display";
 
@@ -631,5 +630,4 @@ void IT8951ESensor::dump_config() {
         YESNO(this->sleep_when_done_), YESNO(this->full_update_every_ > 0), this->full_update_every_);
 }
 
-}  // namespace it8951e
-}  // namespace esphome
+}  // namespace esphome::it8951e
