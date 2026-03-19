@@ -39,7 +39,6 @@ class IT8951ESensor : public PollingComponent, public display::DisplayBuffer,
                       public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING,
                                             spi::DATA_RATE_20MHZ> {
  public:
-  float get_loop_priority() const override { return 0.0f; };
   float get_setup_priority() const override { return setup_priority::PROCESSOR; };
 
 /*

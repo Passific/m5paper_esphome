@@ -28,6 +28,7 @@ CONFIG_SCHEMA = cv.Schema({
             cv.GenerateID(): cv.use_id(M5PaperComponent),
         }
     ),
+    synchronous=True
 )
 async def m5paper_shutdown_main_power_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)

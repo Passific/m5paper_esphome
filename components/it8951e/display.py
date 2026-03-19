@@ -65,6 +65,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.use_id(IT8951ESensor),
         }
     ),
+    synchronous=True
 )
 @automation.register_action(
     "it8951e.updateslow",
@@ -74,6 +75,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.use_id(IT8951ESensor),
         }
     ),
+    synchronous=True
 )
 @automation.register_action(
     "it8951e.draw",
@@ -83,6 +85,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.use_id(IT8951ESensor),
         }
     ),
+    synchronous=True
 )
 
 async def it8951e_clear_to_code(config, action_id, template_arg, args):
