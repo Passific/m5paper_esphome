@@ -22,7 +22,7 @@ enum class EPaperState : uint8_t {
   DEEP_SLEEP,      // deep sleep the display
 };
 
-static constexpr uint32_t MAX_TRANSFER_TIME = 25;  // Transfer in 25ms blocks to allow the loop to run
+static constexpr uint32_t MAX_TRANSFER_TIME = 10;  // Transfer in 10ms blocks to allow the loop to run
 
 enum it8951eModel
 {
@@ -184,8 +184,6 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
     display::DisplayType::DISPLAY_TYPE_GRAYSCALE // .displayType (M5EPD supports 16 gray scale levels)
   };
 
-  void get_device_info(struct IT8951DevInfo_s *info);
-
   int max_x = 0;
   int max_y = 0;
   int min_x = 960;
@@ -218,7 +216,6 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
 
   // comes from ref driver code from waveshare
   uint16_t read_word();
-  void read_words(void *buf, uint32_t length);
 
   void write_two_byte16(uint16_t type, uint16_t cmd);
   void write_command(uint16_t cmd);

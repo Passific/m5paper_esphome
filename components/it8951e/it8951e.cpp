@@ -22,7 +22,7 @@ void IT8951ESensor::write_two_byte16(uint16_t type, uint16_t cmd) {
 uint16_t IT8951ESensor::read_word() {
     this->wait_busy();
     this->enable();
-    this->write_byte16(0x1000);
+    this->write_byte16(IT8951_PACKET_TYPE_READ);
     this->wait_busy();
 
     // dummy
@@ -37,49 +37,19 @@ uint16_t IT8951ESensor::read_word() {
     return word;
 }
 
-void IT8951ESensor::read_words(void *buf, uint32_t length) {
-    ExternalRAMAllocator<uint16_t> allocator(ExternalRAMAllocator<uint16_t>::ALLOW_FAILURE);
-    uint16_t *buffer = allocator.allocate(length);
-    if (buffer == nullptr) {
-        ESP_LOGE(TAG, "Read FAILED to allocate.");
-        return;
-    }
-
-    this->wait_busy();
-    this->enable();
-    this->write_byte16(0x1000);
-    this->wait_busy();
-
-    // dummy
-    this->write_byte16(0x0000);
-    this->wait_busy();
-
-    for (size_t i = 0; i < length; i++) {
-        uint8_t recv[2];
-        this->read_array(recv, sizeof(recv));
-        buffer[i] = encode_uint16(recv[0], recv[1]);
-    }
-
-    this->disable();
-
-    memcpy(buf, buffer, length * sizeof(uint16_t));
-
-    allocator.deallocate(buffer, length);
-}
-
-void IT8951ESensor:: write_command(uint16_t cmd) {
-    this->write_two_byte16(0x6000, cmd);
+void IT8951ESensor::write_command(uint16_t cmd) {
+    this->write_two_byte16(IT8951_PACKET_TYPE_CMD, cmd);
 }
 
 void IT8951ESensor::write_word(uint16_t cmd) {
-    this->write_two_byte16(0x0000, cmd);
+    this->write_two_byte16(IT8951_PACKET_TYPE_WRITE, cmd);
 }
 
 void IT8951ESensor::write_reg(uint16_t addr, uint16_t data) {
-    this->write_command(0x0011);  // tcon write reg command
+    this->write_command(IT8951_TCON_REG_WR);  // tcon write reg command
     this->wait_busy();
     this->enable();
-    this->write_byte(0x0000); // Preamble
+    this->write_byte(IT8951_PACKET_TYPE_WRITE); // Preamble
     this->wait_busy();
     this->write_byte16(addr);
     this->wait_busy();
@@ -182,14 +152,9 @@ void IT8951ESensor::reset(void) {
 
 uint32_t IT8951ESensor::get_buffer_length_() { return this->get_width_internal() * this->get_height_internal(); }
 
-void IT8951ESensor::get_device_info(struct IT8951DevInfo_s *info) {
-    this->write_command(IT8951_I80_CMD_GET_DEV_INFO);
-    this->read_words(info, sizeof(struct IT8951DevInfo_s)/2); // Polling HRDY for each words(2-bytes) if possible
-}
-
 uint16_t IT8951ESensor::get_vcom() {
     this->write_command(IT8951_I80_CMD_VCOM); // tcon vcom get command
-    this->write_word(0x0000);
+    this->write_word(IT8951_I80_CMD_VCOM_READ);
     const uint16_t vcom = this->read_word();
     ESP_LOGI(TAG, "VCOM = %.02fV", (float)vcom/1000);
     return vcom;
@@ -197,7 +162,7 @@ uint16_t IT8951ESensor::get_vcom() {
 
 void IT8951ESensor::set_vcom(uint16_t vcom) {
     this->write_command(IT8951_I80_CMD_VCOM); // tcon vcom set command
-    this->write_word(0x0001);
+    this->write_word(IT8951_I80_CMD_VCOM_WRITE);
     this->write_word(vcom);
 }
 
@@ -212,8 +177,6 @@ void IT8951ESensor::setup() {
 
     this->busy_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
 
-    /* Not reliable, hard-coded in the model device info (same as M5Stack) */
-    //this->get_device_info(&(this->IT8951DevAll[this->model_].devInfo));
     this->dump_config();
 
     this->write_command(IT8951_TCON_SYS_RUN);
@@ -223,8 +186,8 @@ void IT8951ESensor::setup() {
 
     // set vcom to -2.30v
     const uint16_t vcom = this->get_vcom();
-    if (2300 != vcom) {
-        this->set_vcom(2300);
+    if (IT8951_DEFAULT_VCOM != vcom) {
+        this->set_vcom(IT8951_DEFAULT_VCOM);
         this->get_vcom();
     }
 
@@ -329,7 +292,7 @@ bool IT8951ESensor::transfer_row_data_() {
     const uint16_t remaining_h = this->pending_h_ - this->transfer_row_;
     this->set_area(this->pending_x_, this->pending_y_ + this->transfer_row_, this->pending_w_, remaining_h);
     this->enable();
-    this->write_byte16(0x0000);  // data preamble
+    this->write_byte16(IT8951_PACKET_TYPE_WRITE);  // data preamble
 
     while (this->transfer_row_ < this->pending_h_) {
         const uint16_t row_y = this->pending_y_ + this->transfer_row_;
@@ -455,7 +418,7 @@ void IT8951ESensor::clear(bool init) {
 
     this->enable();
     /* Send data preamble */
-    this->write_byte16(0x0000);
+    this->write_byte16(IT8951_PACKET_TYPE_WRITE);
 
     uint8_t clear_chunk[256];
     memset(clear_chunk, 0xFF, sizeof(clear_chunk));
