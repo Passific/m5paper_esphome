@@ -56,6 +56,11 @@ CONFIG_SCHEMA = cv.All(
     .extend(spi.spi_device_schema()),
 )
 
+# `synchronous` kwarg was added in newer ESPHome; only pass it when supported
+_it8951e_action_synchronous = {}
+if cv.Version.parse(ESPHOME_VERSION) >= cv.Version.parse("2026.3.0"):
+    _it8951e_action_synchronous["synchronous"] = True
+
 @automation.register_action(
     "it8951e.clear",
     ClearAction,
@@ -64,7 +69,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.use_id(IT8951ESensor),
         }
     ),
-    synchronous=True
+    **_it8951e_action_synchronous
 )
 @automation.register_action(
     "it8951e.updateslow",
@@ -74,8 +79,9 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.use_id(IT8951ESensor),
         }
     ),
-    synchronous=True
+    **_it8951e_action_synchronous
 )
+
 @automation.register_action(
     "it8951e.draw",
     DrawAction,
@@ -84,7 +90,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.use_id(IT8951ESensor),
         }
     ),
-    synchronous=True
+    **_it8951e_action_synchronous
 )
 
 async def it8951e_clear_to_code(config, action_id, template_arg, args):

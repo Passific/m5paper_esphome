@@ -2,8 +2,7 @@
 #include "m5paper.h"
 #include "driver/gpio.h"
 
-namespace esphome {
-namespace m5paper {
+namespace esphome::m5paper {
 
 // hack to hold power lines up in deep sleep mode
 // battery life isn't great with deep sleep, recommend bm8563 sleep
@@ -26,7 +25,7 @@ void M5PaperComponent::setup() {
 }
 
 void M5PaperComponent::shutdown_main_power() {
-    ESP_LOGE(TAG, "Shutting Down Power");
+    ESP_LOGW(TAG, "Shutting Down Power");
     if (ALLOW_ESPHOME_DEEP_SLEEP) {
         gpio_hold_dis(GPIO_NUM_2);
         gpio_hold_dis(GPIO_NUM_5);
@@ -38,5 +37,4 @@ void M5PaperComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "M5Paper");
 }
 
-} //namespace m5paper
-} //namespace esphome
+} //namespace esphome::m5paper

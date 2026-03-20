@@ -2,6 +2,7 @@ import esphome.codegen as cg
 from esphome import pins
 import esphome.config_validation as cv
 from esphome import automation
+from esphome.const import __version__ as ESPHOME_VERSION
 from esphome.const import (
     CONF_ID,
 )
@@ -16,9 +17,14 @@ CONF_BATTERY_POWER_PIN = "battery_power_pin"
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(M5PaperComponent),
-    cv.Required(CONF_MAIN_POWER_PIN): pins.gpio_output_pin_schema,
-    cv.Required(CONF_BATTERY_POWER_PIN): pins.gpio_output_pin_schema
+    cv.Required(CONF_MAIN_POWER_PIN): pins.internal_gpio_output_pin_schema,
+    cv.Required(CONF_BATTERY_POWER_PIN): pins.internal_gpio_output_pin_schema
 })
+
+# `synchronous` kwarg was added in newer ESPHome; only pass it when supported
+_it8951e_action_synchronous = {}
+if cv.Version.parse(ESPHOME_VERSION) >= cv.Version.parse("2026.3.0"):
+    _it8951e_action_synchronous["synchronous"] = True
 
 @automation.register_action(
     "m5paper.shutdown_main_power",
@@ -28,7 +34,7 @@ CONFIG_SCHEMA = cv.Schema({
             cv.GenerateID(): cv.use_id(M5PaperComponent),
         }
     ),
-    synchronous=True
+    **_it8951e_action_synchronous
 )
 async def m5paper_shutdown_main_power_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
