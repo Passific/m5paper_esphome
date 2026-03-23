@@ -343,7 +343,7 @@ void IT8951ESensor::process_state_() {
 
         if (this->update_timing_active_) {
             const uint32_t elapsed = millis() - this->update_started_at_;
-            ESP_LOGW(TAG, "Display update took %ums (mode=%d area=%ux%u@%u,%u)",
+            ESP_LOGD(TAG, "Display update took %ums (mode=%d area=%ux%u@%u,%u)",
                      elapsed,
                      static_cast<int>(this->pending_mode_),
                      this->pending_w_,
