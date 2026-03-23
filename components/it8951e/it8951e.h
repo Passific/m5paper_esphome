@@ -235,6 +235,7 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   bool is_idle_() const;
   bool prepare_transfer_(update_mode_e &mode);
   bool transfer_row_data_();
+  bool is_display_busy_();
   uint8_t color_to_nibble_(const Color &color) const;
 
   EPaperState state_{EPaperState::IDLE};
@@ -254,6 +255,8 @@ shown in Figure 1. The use of a white image in the transition from 4-bit to
   bool did_init_clear_{false};
   uint32_t clear_count_{0};
   static constexpr uint32_t INIT_CLEAR_EVERY = 12;
+  bool update_pending_{false};
+  update_mode_e queued_update_mode_{update_mode_e::UPDATE_MODE_NONE};
 };
 
 template<typename... Ts> class ClearAction : public Action<Ts...>, public Parented<IT8951ESensor> {

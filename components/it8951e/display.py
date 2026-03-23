@@ -41,7 +41,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Required(CONF_RESET_PIN): pins.gpio_output_pin_schema,
             cv.Required(CONF_BUSY_PIN): pins.gpio_input_pin_schema,
             cv.Optional(CONF_REVERSED): cv.boolean,
-            cv.Optional(CONF_RESET_DURATION, default=20): cv.All(
+            cv.Optional(CONF_RESET_DURATION, default="20ms"): cv.All(
                 cv.positive_time_period_milliseconds,
                 cv.Range(max=core.TimePeriod(milliseconds=500)),
             ),

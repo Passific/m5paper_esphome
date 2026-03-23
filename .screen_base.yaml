@@ -2,6 +2,9 @@ esphome:
   name: ${device_id}
   name_add_mac_suffix: true
   on_boot:
+    - then:
+      # read the RTC time once when the system boots
+      bm8563.read_time:
     - priority: -100
       then:
         - it8951e.clear
@@ -181,19 +184,11 @@ display:
     model: M5EPD
     cs_pin: GPIO15
     reset_pin: GPIO23
-    reset_duration: 100ms
     busy_pin: GPIO27
     rotation: 0
     reversed: False
     update_interval: never
-    full_update_every: 60
     auto_clear_enabled: true # Should be set to false when partial updates are used, to avoid clearing the screen after each update
-    sleep_when_done: false
-    on_page_change:
-      then:
-        - lambda: id(homepage_force_full_redraw) = true;
-        - it8951e.clear
-        - it8951e.updateslow
     lambda: |-
       // Clock
       it.strftime(25, 420, id(clock_font), "%H:%M", id(rtc_time).now());
@@ -491,8 +486,9 @@ touchscreen:
   - platform: gt911
     display: m5paper_display
     id: gt911_touchscreen
-    interrupt_pin: GPIO36
-    update_interval: never # No pulling as interrupt pin is used
+    # Disable interrupt until issue https://github.com/esphome/esphome/issues/14953 is resolved
+#    interrupt_pin: GPIO36
+#    update_interval: never # No pulling as interrupt pin is used
     calibration:
       x_min: 0
       x_max: 540
