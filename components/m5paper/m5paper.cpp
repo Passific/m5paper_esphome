@@ -4,10 +4,6 @@
 
 namespace esphome::m5paper {
 
-// hack to hold power lines up in deep sleep mode
-// battery life isn't great with deep sleep, recommend bm8563 sleep
-#define ALLOW_ESPHOME_DEEP_SLEEP true
-
 static const char *TAG = "m5paper.component";
 
 void M5PaperComponent::setup() {
@@ -18,7 +14,7 @@ void M5PaperComponent::setup() {
     this->battery_power_pin_->pin_mode(gpio::FLAG_OUTPUT);
     this->battery_power_pin_->digital_write(true);
 
-    if (ALLOW_ESPHOME_DEEP_SLEEP) {
+    if (this->allow_esphome_deep_sleep_) {
         gpio_hold_en(GPIO_NUM_2);
         gpio_hold_en(GPIO_NUM_5);
     }
@@ -26,7 +22,7 @@ void M5PaperComponent::setup() {
 
 void M5PaperComponent::shutdown_main_power() {
     ESP_LOGW(TAG, "Shutting Down Power");
-    if (ALLOW_ESPHOME_DEEP_SLEEP) {
+    if (this->allow_esphome_deep_sleep_) {
         gpio_hold_dis(GPIO_NUM_2);
         gpio_hold_dis(GPIO_NUM_5);
     }
@@ -34,7 +30,10 @@ void M5PaperComponent::shutdown_main_power() {
 }
 
 void M5PaperComponent::dump_config() {
-    ESP_LOGCONFIG(TAG, "M5Paper");
+    ESP_LOGCONFIG(TAG, "M5Paper"
+        " Allow ESPHome Deep Sleep: %s",
+        YESNO(this->allow_esphome_deep_sleep_)
+    );
 }
 
 } //namespace esphome::m5paper

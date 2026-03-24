@@ -14,11 +14,13 @@ PowerAction = m5paper_ns.class_("PowerAction", automation.Action)
 
 CONF_MAIN_POWER_PIN = "main_power_pin"
 CONF_BATTERY_POWER_PIN = "battery_power_pin"
+CONF_ALLOW_ESPHOME_DEEP_SLEEP = "allow_esphome_deep_sleep"
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(M5PaperComponent),
     cv.Required(CONF_MAIN_POWER_PIN): pins.internal_gpio_output_pin_schema,
-    cv.Required(CONF_BATTERY_POWER_PIN): pins.internal_gpio_output_pin_schema
+    cv.Required(CONF_BATTERY_POWER_PIN): pins.internal_gpio_output_pin_schema,
+    cv.Optional(CONF_ALLOW_ESPHOME_DEEP_SLEEP, default=True): cv.boolean
 })
 
 # `synchronous` kwarg was added in newer ESPHome; only pass it when supported
@@ -52,3 +54,5 @@ async def to_code(config):
     if CONF_BATTERY_POWER_PIN in config:
         power = await cg.gpio_pin_expression(config[CONF_BATTERY_POWER_PIN])
         cg.add(var.set_battery_power_pin(power))
+    if CONF_ALLOW_ESPHOME_DEEP_SLEEP in config:
+        cg.add(var.set_allow_esphome_deep_sleep(config[CONF_ALLOW_ESPHOME_DEEP_SLEEP]))

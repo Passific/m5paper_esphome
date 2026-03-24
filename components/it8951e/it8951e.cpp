@@ -64,9 +64,15 @@ void IT8951ESensor::set_target_memory_addr(uint16_t tar_addrL, uint16_t tar_addr
 
 void IT8951ESensor::write_args(uint16_t cmd, uint16_t *args, uint16_t length) {
     this->write_command(cmd);
+    // Batch all args in a single SPI transaction
+    this->wait_busy();
+    this->enable();
+    this->write_byte16(IT8951_PACKET_TYPE_WRITE);
+    this->wait_busy();
     for (uint16_t i = 0; i < length; i++) {
-        this->write_word(args[i]);
+        this->write_byte16(args[i]);
     }
+    this->disable();
 }
 
 void IT8951ESensor::set_area(uint16_t x, uint16_t y, uint16_t w,
@@ -131,7 +137,10 @@ void IT8951ESensor::reset(void) {
     delay(100);
 }
 
-uint32_t IT8951ESensor::get_buffer_length_() { return this->get_width_internal() * this->get_height_internal(); }
+uint32_t IT8951ESensor::get_buffer_length_() {
+    // 4bpp: two pixels per byte
+    return (this->get_width_internal() >> 1) * this->get_height_internal();
+}
 
 uint16_t IT8951ESensor::get_vcom() {
     this->write_command(IT8951_I80_CMD_VCOM); // tcon vcom get command
@@ -283,14 +292,22 @@ bool IT8951ESensor::transfer_row_data_() {
     this->enable();
     this->write_byte16(IT8951_PACKET_TYPE_WRITE);  // data preamble
 
+    // Full-width fast path: rows are contiguous in buffer, send in large chunks
+    const bool full_width = (this->pending_x_ == 0 && this->pending_w_ == this->usPanelW_);
     while (this->transfer_row_ < this->pending_h_) {
-        const uint16_t row_y = this->pending_y_ + this->transfer_row_;
-        const uint16_t row_bytes = this->pending_w_ >> 1;
-        const uint32_t row_index = static_cast<uint32_t>(row_y) * bytewidth + (this->pending_x_ >> 1);
-
-        this->write_array(&this->buffer_[row_index], row_bytes);
-
-        this->transfer_row_++;
+        if (full_width) {
+            const uint16_t remaining = this->pending_h_ - this->transfer_row_;
+            const uint16_t chunk = remaining < 50 ? remaining : 50;
+            const uint32_t offset = static_cast<uint32_t>(this->pending_y_ + this->transfer_row_) * bytewidth;
+            this->write_array(&this->buffer_[offset], static_cast<uint32_t>(chunk) * bytewidth);
+            this->transfer_row_ += chunk;
+        } else {
+            const uint16_t row_y = this->pending_y_ + this->transfer_row_;
+            const uint16_t row_bytes = this->pending_w_ >> 1;
+            const uint32_t row_index = static_cast<uint32_t>(row_y) * bytewidth + (this->pending_x_ >> 1);
+            this->write_array(&this->buffer_[row_index], row_bytes);
+            this->transfer_row_++;
+        }
         if (millis() - start_time >= MAX_TRANSFER_TIME) {
             break;
         }
@@ -433,6 +450,10 @@ void IT8951ESensor::update_slow() {
 }
 
 uint8_t IT8951ESensor::color_to_nibble_(const Color &color) const {
+    // Fast path for the two most common colors (avoids all arithmetic)
+    if (color.raw_32 == 0)          return 0x00;  // COLOR_OFF → white
+    if (color.raw_32 == 0xFFFFFFFF) return 0x0F;  // COLOR_ON  → black
+
     // Backward-compatible direct nibble path used by configs that set raw_32 to 0x0-0xF.
     if (color.g == 0 && color.b == 0 && color.w == 0 && color.r <= 0x0F) {
         return color.r;
@@ -562,8 +583,14 @@ void IT8951ESensor::dump_config() {
     ESP_LOGCONFIG(TAG,
         "  Sleep when done: %s\n"
         "  Partial Updating: %s\n"
-        "  Full Update Every: %u",
-        YESNO(this->sleep_when_done_), YESNO(this->full_update_every_ > 0), this->full_update_every_);
+        "  Full Update Every: %u\n"
+        "  Reversed colors: %s\n"
+        "  Reset duration: %ums",
+        YESNO(this->sleep_when_done_),
+        YESNO(this->full_update_every_ > 0),
+        this->full_update_every_,
+        YESNO(this->reversed_),
+        this->reset_duration_);
 }
 
 }  // namespace esphome::it8951e

@@ -15,11 +15,15 @@ class M5PaperComponent : public Component {
 public:
     void set_battery_power_pin(GPIOPin *power) { this->battery_power_pin_ = power; }
     void set_main_power_pin(GPIOPin *power) { this->main_power_pin_ = power; }
+    void set_allow_esphome_deep_sleep(bool sleep) { this->allow_esphome_deep_sleep_ = sleep; }
     void shutdown_main_power();
 
 private:
     GPIOPin *battery_power_pin_{nullptr};
     GPIOPin *main_power_pin_{nullptr};
+    // hack to hold power lines up in deep sleep mode
+    // battery life isn't great with deep sleep, recommend bm8563 sleep
+    bool allow_esphome_deep_sleep_{true};
 
 };
 
